@@ -1,0 +1,2 @@
+[12-Jun-2019 10:15:03] ERROR [ecommerce_api.views:150] Error in GetOrdersAPI: 'user_id' at line no: 134
+[12-Jun-2019 10:15:58] INFO [ecommerce_api.views:167] <QuerySet [<Orders: 32ef11c4-8cf9-11e9-956f-80a58985686f>, <Orders: 32ef11c4-8cf9-11e9-956f-80a58985686f>, <Orders: 32ef11c4-8cf9-11e9-956f-80a58985686f>]>

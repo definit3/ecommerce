@@ -1,0 +1,49 @@
+class Cart(models.Model):
+    item = models.ForeignKey(Items,on_delete=models.CASCADE,)
+    count = models.IntegerField()
+
+class Orders(models.Model):
+    buyer = models.ForeignKey(Sellers,on_delete=models.CASCADE,)
+    order_id = models.TextField()
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE,)
+    price = models.IntegerField(default=0)
+    def __str__(self):
+        return self.buyer.seller_name
+
+
+
+Cart
+  - cart_id
+
+
+Customer
+  - name
+  - age
+  - gender
+  - customer_id
+
+
+
+UnitCart
+  - product
+  - quantity
+  - order
+
+
+
+Order
+  - order_id
+  - customer
+
+
+
+Brand
+  - name
+
+
+
+PRODUCT
+  - name
+  - product_id
+  - price
+  - brand
