@@ -9,6 +9,8 @@ from django.contrib.auth import authenticate, login, logout
 import logging
 import sys
 import uuid
+import smtplib
+from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +96,12 @@ class SaveOrdersAPI(APIView):
             user_id = data['user_id']
             price = data['totalammount']
             buyer_obj = Sellers.objects.get(seller_id=user_id)
+
             new_order_id = uuid.uuid1()
             logger.info(cart_items)
             for item in cart_items:
+                seller_id = item['seller_id']
+                logger.info(seller_id)
                 item_id = item['item_id']
                 quantity = item['qty']
                 logger.info("user_id: %s", user_id)
@@ -106,12 +111,20 @@ class SaveOrdersAPI(APIView):
                 item_obj = Items.objects.get(item_id=item_id)
                 cart_obj = Cart(item=item_obj,count=quantity)
                 cart_obj.save()
-                logger.info(cart_obj)
                 new_order_obj = Orders(buyer = buyer_obj, order_id = new_order_id , cart=cart_obj, price=price)
                 new_order_obj.save()
-                logger.info(new_order_obj)
+
             response['order_id']=new_order_id
             response['status'] = 200
+
+            seller_obj = Sellers.objects.get(seller_id=seller_id)
+            seller_email = seller_obj.seller_email
+            s = smtplib.SMTP('smtp.gmail.com',587)  #enter mail server host and port number
+            s.starttls()
+            s.login("roguedoppelganger@gmail.com", "02htcdesireC") #enter your email id and password.
+            message = "Your have received a new order. Please approve or decline it! "
+            s.sendmail("roguedoppelganger@gmail.com",seller_email, message)
+            s.quit()
 
         except Exception as e:
             e_type, e_object, e_tb = sys.exc_info()
@@ -133,14 +146,14 @@ class GetOrdersAPI(APIView):
             data = request.data
             user_id = data['user_id']
             buyer_obj = Sellers.objects.get(seller_id=user_id)
-            # orders = Orders.objects.filter(buyer=buyer_obj).distinct()
-            orders = Orders.objects.values('order_id', 'price').distinct()
+            orders = Orders.objects.values('order_id', 'price', 'date').distinct()
             logger.info(orders)
             order_list = []
             for order in orders:
                 temp = {}
                 temp['order_id']=order["order_id"]
                 temp['price']=order["price"]
+                temp['date']=order["date"]
                 order_list.append(temp)
             response['status'] = 200
             response['orders'] = order_list
@@ -171,10 +184,13 @@ class GetFullOrdersAPI(APIView):
                 temp['item_id']=order.cart.item.item_id
                 temp['item_name']=order.cart.item.name
                 temp['item_price']=order.cart.item.item_price
+                temp['item_image'] = order.cart.item.item_image.url
                 temp['count']=order.cart.count
+                logger.info(temp)
                 order_list.append(temp)
             response['status'] = 200
             response['orders'] = order_list
+            logger.info(response)
 
         except Exception as e:
             e_type, e_object, e_tb = sys.exc_info()
@@ -208,6 +224,35 @@ class LoginSubmitAPI(APIView):
             logger.error("Error in LoginSubmitAPI: %s at line no: %s", str(e), str(e_tb.tb_lineno))
         return Response(data=response)
 
+class SignupSubmitAPI(APIView):
+
+    def post(self, request, *args, **kwargs):
+        response = {}
+        response['status'] = 500
+        try:
+            data = request.data
+            email = data['email']
+            password = data['password']
+            name = data['name']
+            Temp = User.objects.filter(username =email)
+            print(Temp)
+            if len(Temp) == 0:
+                user_obj = User.objects.create_user(username=email, password=password)
+                seller_id = uuid.uuid1()
+                seller_obj = Sellers.objects.create(seller_email=email, seller_id = seller_id, user=user_obj, seller_name=name)
+                seller_obj.save()
+                response['status'] = 200
+                response['message'] = "ID created successfully"
+            else :
+                response['message'] = "email-id already exists"
+
+        except Exception as e:
+            e_type, e_object, e_tb = sys.exc_info()
+            logger.error("Error in SignupSubmitAPI: %s at line no: %s", str(e), str(e_tb.tb_lineno))
+
+        return Response(data=response)
+
+SignupSubmit=SignupSubmitAPI.as_view()
 loginSubmit=LoginSubmitAPI.as_view()
 GetSellers=GetSellersAPI.as_view()
 GetItems=GetItemsAPI.as_view()
